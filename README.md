@@ -6,6 +6,8 @@
 
 A blockchain-based backend infrastructure for Web3 education platform, built with Truffle framework and Solidity smart contracts.
 
+English | [简体中文](README_CN.md)
+
 ## 🌟 Features
 
 - **Smart Contract Development**: Solidity-based contracts for educational content management
@@ -105,7 +107,8 @@ web3-school-backend/
 ├── test/                   # Test files
 │   └── .gitkeep
 ├── truffle-config.js       # Truffle configuration
-├── README.md              # Project documentation
+├── README.md              # Project documentation (English)
+├── README_CN.md           # Project documentation (Chinese)
 └── .env.example           # Environment variables template
 ```
 
@@ -303,6 +306,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 📋 Advanced analytics
 - 📋 Mobile app integration
 - 📋 DAO governance
+
+## 🌍 Language Support
+
+- [English](README.md)
+- [简体中文](README_CN.md)
 
 ---
 
