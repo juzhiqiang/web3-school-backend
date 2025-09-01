@@ -8,6 +8,7 @@ const DeveloperDeploymentPlatform = artifacts.require("DeveloperDeploymentPlatfo
 const CourseManager = artifacts.require("CourseManager");
 
 module.exports = async function (deployer, network, accounts) {
+  console.log(accounts)
   const [owner, instructor] = accounts;
 
   console.log("开始部署 Web3 School 智能合约...");
