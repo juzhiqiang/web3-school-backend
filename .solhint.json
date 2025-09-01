@@ -1,0 +1,14 @@
+{
+  "extends": "solhint:recommended",
+  "rules": {
+    "prettier/prettier": "error",
+    "gas-consumption": ["error", 9000000],
+    "reason-string": ["warn", {"maxLength": 50}],
+    "function-max-lines": ["error", 50],
+    "code-complexity": ["error", 8],
+    "max-line-length": ["error", 120],
+    "not-rely-on-time": "off",
+    "avoid-suicide": "error",
+    "avoid-sha3": "warn"
+  }
+}
