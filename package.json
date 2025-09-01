@@ -1,20 +1,26 @@
 {
   "name": "web3-school-backend",
   "version": "1.0.0",
-  "description": "Web3学校智能合约后端 - 包含YD代币、开发者部署平台和课程管理系统",
-  "main": "index.js",
+  "description": "Web3学校智能合约后端 - 基于Truffle框架，包含YD代币、开发者部署平台和课程管理系统",
+  "main": "truffle-config.js",
   "scripts": {
     "compile": "truffle compile",
     "deploy": "truffle compile && truffle migrate --reset --network goerli",
     "deploy:local": "truffle compile && truffle migrate --reset --network development",
+    "deploy:sepolia": "truffle compile && truffle migrate --reset --network sepolia",
     "test": "truffle test",
     "test:coverage": "truffle run coverage",
     "console": "truffle console --network development",
     "console:goerli": "truffle console --network goerli",
     "interact": "truffle exec scripts/interact.js --network development",
     "deploy-local": "truffle exec scripts/deploy-local.js --network development",
+    "estimate-gas": "truffle exec scripts/estimate-gas.js --network development",
     "verify": "truffle run verify --network goerli",
-    "flatten": "truffle-flattener contracts/*.sol > flattened.sol"
+    "verify:sepolia": "truffle run verify --network sepolia",
+    "flatten": "truffle-flattener contracts/*.sol > flattened.sol",
+    "size-check": "node scripts/check-contract-size.js",
+    "lint": "solhint contracts/**/*.sol",
+    "clean": "rm -rf build/"
   },
   "keywords": [
     "web3",
@@ -24,24 +30,29 @@
     "education",
     "token",
     "defi",
-    "smart-contracts"
+    "smart-contracts",
+    "truffle"
   ],
   "author": "Web3 School",
   "license": "MIT",
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.3",
     "@truffle/hdwallet-provider": "^2.1.15",
-    "dotenv": "^17.2.1"
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.16",
-    "chai": "^4.3.7",
+    "chai": "^4.3.8",
     "truffle": "^5.11.5",
     "truffle-flattener": "^1.6.0",
-    "solidity-coverage": "^0.8.5"
+    "truffle-plugin-verify": "^0.5.31",
+    "solidity-coverage": "^0.8.5",
+    "solhint": "^4.0.0",
+    "eth-gas-reporter": "^0.2.25"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   },
   "repository": {
     "type": "git",

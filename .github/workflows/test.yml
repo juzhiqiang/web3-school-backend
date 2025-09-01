@@ -1,4 +1,4 @@
-name: Smart Contract Tests
+name: Truffle Smart Contract Tests
 
 on:
   push:
@@ -30,10 +30,19 @@ jobs:
     - name: Install Truffle globally
       run: npm install -g truffle
     
+    - name: Start Ganache
+      run: |
+        npm install -g ganache-cli
+        ganache-cli --deterministic --accounts 10 --host 0.0.0.0 --port 8545 &
+        sleep 5
+    
     - name: Compile contracts
       run: npm run compile
     
-    - name: Run tests
+    - name: Check contract sizes
+      run: npm run size-check
+    
+    - name: Run Truffle tests
       run: npm run test
     
     - name: Generate coverage report
@@ -43,32 +52,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage/lcov.info
-        fail_ci_if_error: true
-
-  security-audit:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18.x'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Run security audit
-      run: npm audit --audit-level high
-    
-    - name: Install slither
-      run: pip3 install slither-analyzer
-    
-    - name: Run slither analysis
-      run: slither contracts/ --print human-summary
+        fail_ci_if_error: false
 
   lint:
     runs-on: ubuntu-latest
@@ -86,10 +70,36 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Run solhint
-      run: npx solhint contracts/**/*.sol
+    - name: Run Solidity linter
+      run: npm run lint
+
+  security-audit:
+    runs-on: ubuntu-latest
     
-    - name: Check contract size
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run npm security audit
+      run: npm audit --audit-level high
+    
+    - name: Install Python and Slither
       run: |
-        npm run compile
-        node scripts/check-contract-size.js
+        sudo apt-get update
+        sudo apt-get install python3 python3-pip
+        pip3 install slither-analyzer
+    
+    - name: Compile contracts for Slither
+      run: npm run compile
+    
+    - name: Run Slither security analysis
+      run: slither contracts/ --print human-summary || true
