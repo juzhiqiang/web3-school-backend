@@ -1,53 +1,98 @@
 {
   "name": "web3-school-backend",
-  "version": "1.0.0",
-  "description": "Web3学校智能合约后端 - 基于Truffle框架，包含YD代币、开发者部署平台和课程管理系统",
+  "version": "1.3.0",
+  "description": "Web3学校智能合约后端 - 仅支持私钥安全部署，包含YD代币、开发者部署平台和课程管理系统",
   "main": "truffle-config.js",
   "scripts": {
     "compile": "truffle compile",
-    "deploy": "truffle compile && truffle migrate --reset --network goerli",
-    "deploy:local": "truffle compile && truffle migrate --reset --network ganache",
+    "compile:clean": "rm -rf build/ && truffle compile",
+    
+    "deploy": "truffle compile && truffle migrate --reset --network sepolia",
+    "deploy:local": "truffle compile && truffle migrate --reset --network development",
+    "deploy:ganache": "truffle compile && truffle migrate --reset --network ganache",
     "deploy:sepolia": "truffle compile && truffle migrate --reset --network sepolia",
+    "deploy:mainnet": "truffle compile && truffle migrate --reset --network mainnet",
+    "deploy:dashboard": "truffle migrate --network dashboard",
+    
+    "deploy:privatekey": "node scripts/deploy-helper.js --network sepolia",
+    "deploy:privatekey:mainnet": "node scripts/deploy-helper.js --network mainnet --verify",
+    "deploy:verify": "node scripts/deploy-helper.js --network sepolia --verify",
+    
+    "verify:deployment": "node scripts/verify-deployment.js --network sepolia",
+    "verify:deployment:test": "node scripts/verify-deployment.js --network sepolia --test",
+    
     "test": "truffle test",
     "test:coverage": "truffle run coverage",
+    "test:gas": "truffle test --reporter eth-gas-reporter",
+    
     "console": "truffle console --network ganache",
-    "console:goerli": "truffle console --network goerli",
+    "console:sepolia": "truffle console --network sepolia",
+    "console:mainnet": "truffle console --network mainnet",
+    
     "interact": "truffle exec scripts/interact.js --network ganache",
+    "interact:sepolia": "truffle exec scripts/interact.js --network sepolia",
+    
     "estimate-gas": "truffle exec scripts/estimate-gas.js --network ganache",
-    "verify": "truffle run verify --network goerli",
-    "verify:sepolia": "truffle run verify --network sepolia",
+    "check-balance": "node scripts/check-balance.js",
+    
+    "verify": "truffle run verify --network sepolia",
+    "verify:mainnet": "truffle run verify --network mainnet",
+    "verify:all": "npm run verify:ydtoken && npm run verify:platform && npm run verify:coursemanager",
+    "verify:ydtoken": "truffle run verify YDToken --network sepolia",
+    "verify:platform": "truffle run verify DeveloperDeploymentPlatform --network sepolia", 
+    "verify:coursemanager": "truffle run verify CourseManager --network sepolia",
+    
     "flatten": "truffle-flattener contracts/*.sol > flattened.sol",
-    "size-check": "node scripts/check-contract-size.js",
+    "size-check": "truffle run contract-size",
+    "security-check": "mythril analyze contracts/*.sol",
+    
     "lint": "solhint contracts/**/*.sol",
-    "clean": "rm -rf build/"
+    "lint:fix": "solhint contracts/**/*.sol --fix",
+    "format": "prettier --write contracts/**/*.sol",
+    
+    "clean": "rm -rf build/ deployments/ coverage/ .coverage_artifacts/ .coverage_cache/",
+    "clean:all": "npm run clean && rm -f flattened.sol",
+    
+    "setup": "npm install && npm run compile",
+    "setup:dev": "npm install && npm run compile && npm run deploy:local",
+    
+    "start": "npm run deploy:local",
+    "start:sepolia": "npm run deploy:sepolia"
   },
   "keywords": [
     "web3",
-    "blockchain",
+    "blockchain", 
     "ethereum",
     "solidity",
     "education",
     "token",
     "defi",
     "smart-contracts",
-    "truffle"
+    "truffle",
+    "private-key-deployment",
+    "secure-deployment"
   ],
   "author": "Web3 School",
   "license": "MIT",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.9.3",
+    "@openzeppelin/contracts": "^5.0.0",
     "@truffle/hdwallet-provider": "^2.1.15",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "web3": "^4.2.0"
   },
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.16",
     "chai": "^4.3.8",
     "truffle": "^5.11.5",
-    "truffle-flattener": "^1.6.0",
+    "truffle-flattener": "^1.6.0", 
     "truffle-plugin-verify": "^0.5.31",
+    "truffle-contract-size": "^2.0.1",
     "solidity-coverage": "^0.8.5",
     "solhint": "^4.0.0",
-    "eth-gas-reporter": "^0.2.25"
+    "eth-gas-reporter": "^0.2.25",
+    "prettier": "^3.0.0",
+    "prettier-plugin-solidity": "^1.1.3",
+    "mythril": "^0.23.0"
   },
   "engines": {
     "node": ">=16.0.0",
@@ -60,5 +105,13 @@
   "bugs": {
     "url": "https://github.com/juzhiqiang/web3-school-backend/issues"
   },
-  "homepage": "https://github.com/juzhiqiang/web3-school-backend#readme"
+  "homepage": "https://github.com/juzhiqiang/web3-school-backend#readme",
+  "truffle": {
+    "version": "^5.11.5"
+  },
+  "deploymentSecurity": {
+    "supportedMethods": ["private-key", "truffle-dashboard"],
+    "disallowedMethods": ["mnemonic", "seed-phrase"],
+    "securityLevel": "high"
+  }
 }
