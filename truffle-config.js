@@ -1,10 +1,10 @@
 /**
- * Web3 School Backend - 优化的 Truffle 配置
+ * Web3 School Backend - Truffle 配置
  * 
- * 🔑 支持多种部署方式:
- * 1. 私钥部署 (推荐) - 设置 PRIVATE_KEY 环境变量
- * 2. 助记词部署 - 设置 MNEMONIC 环境变量 
- * 3. Truffle Dashboard - 使用浏览器钱包
+ * 🔑 仅支持私钥部署方式 (安全性更高)
+ * 支持部署方式:
+ * 1. 私钥部署 - 设置 PRIVATE_KEY 环境变量
+ * 2. Truffle Dashboard - 使用浏览器钱包
  * 
  * 使用方法:
  * truffle migrate --network <network-name>
@@ -15,8 +15,7 @@ const HDWalletProvider = require('@truffle/hdwallet-provider');
 
 // 环境变量
 const { 
-  PRIVATE_KEY,           // 私钥 (推荐)
-  MNEMONIC,              // 助记词 (备选)
+  PRIVATE_KEY,           // 私钥 (必需)
   INFURA_PROJECT_ID,     // Infura 项目ID
   ALCHEMY_API_KEY,       // Alchemy API Key (备选)
   ETHERSCAN_API_KEY,     // 合约验证
@@ -24,19 +23,19 @@ const {
 } = process.env;
 
 /**
- * 创建钱包提供者
- * 优先使用私钥，其次使用助记词
+ * 创建钱包提供者 - 仅支持私钥
  */
 function createProvider(rpcUrl) {
-  if (PRIVATE_KEY) {
-    console.log("🔑 使用私钥部署");
-    return new HDWalletProvider(PRIVATE_KEY, rpcUrl);
-  } else if (MNEMONIC) {
-    console.log("📝 使用助记词部署");
-    return new HDWalletProvider(MNEMONIC, rpcUrl);
-  } else {
-    throw new Error("❌ 请在 .env 文件中设置 PRIVATE_KEY 或 MNEMONIC");
+  if (!PRIVATE_KEY) {
+    throw new Error("❌ 必须在 .env 文件中设置 PRIVATE_KEY");
   }
+  
+  if (!PRIVATE_KEY.startsWith('0x')) {
+    throw new Error("❌ 私钥必须以 0x 开头");
+  }
+  
+  console.log("🔑 使用私钥部署");
+  return new HDWalletProvider(PRIVATE_KEY, rpcUrl);
 }
 
 /**
@@ -102,22 +101,6 @@ module.exports = {
       skipDryRun: false
     },
 
-    // Goerli 测试网 (即将弃用)
-    goerli: {
-      provider: () => {
-        const rpcUrl = getRpcUrl('goerli', ALCHEMY_API_KEY ? 'alchemy' : 'infura');
-        return createProvider(rpcUrl);
-      },
-      network_id: 5,
-      gas: 8000000,
-      gasPrice: getGasPrice(15), // 15 gwei
-      confirmations: 2,
-      timeoutBlocks: 200,
-      skipDryRun: true,
-      networkCheckTimeout: 1000000,
-      deploymentPollingInterval: 10000
-    },
-
     // Sepolia 测试网 (推荐)
     sepolia: {
       provider: () => {
@@ -145,10 +128,10 @@ module.exports = {
       skipDryRun: true
     },
 
-    // Arbitrum Goerli 测试网
-    arbitrum_goerli: {
-      provider: () => createProvider("https://goerli-rollup.arbitrum.io/rpc"),
-      network_id: 421613,
+    // Arbitrum Sepolia 测试网
+    arbitrum_sepolia: {
+      provider: () => createProvider("https://sepolia-rollup.arbitrum.io/rpc"),
+      network_id: 421614,
       gas: 8000000,
       gasPrice: getGasPrice(1), // 1 gwei (Arbitrum 更便宜)
       confirmations: 2,
