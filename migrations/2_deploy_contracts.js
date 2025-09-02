@@ -6,8 +6,6 @@
  */
 
 const YDToken = artifacts.require("YDToken");
-const DeveloperDeploymentPlatform = artifacts.require("DeveloperDeploymentPlatform");
-const CourseManager = artifacts.require("CourseManager");
 
 module.exports = async function (deployer, network, accounts) {
   console.log("🚀 开始部署 Web3 School 智能合约 (仅私钥安全部署)...");
@@ -45,76 +43,28 @@ module.exports = async function (deployer, network, accounts) {
     console.log(`   代币符号: ${tokenSymbol}`);
     console.log(`   总供应量: ${web3.utils.fromWei(totalSupply, 'ether')} YD`);
 
-    // 2. 部署开发者部署平台
-    console.log("\n🏗️ 2. 部署 DeveloperDeploymentPlatform...");
-    await deployer.deploy(DeveloperDeploymentPlatform, ydToken.address, {
-      gas: config.gasLimit,
-      gasPrice: config.gasPrice
-    });
-    const platform = await DeveloperDeploymentPlatform.deployed();
-    console.log(`✅ DeveloperDeploymentPlatform 部署成功: ${platform.address}`);
 
-    // 3. 部署课程管理合约
-    console.log("\n📚 3. 部署 CourseManager...");
-    const instructor = accounts[1] || accounts[0]; // 使用第二个账户作为讲师，如果没有则使用部署者
-    await deployer.deploy(CourseManager, ydToken.address, instructor, {
-      gas: config.gasLimit,
-      gasPrice: config.gasPrice
-    });
-    const courseManager = await CourseManager.deployed();
-    console.log(`✅ CourseManager 部署成功: ${courseManager.address}`);
-    console.log(`📝 默认讲师地址: ${instructor}`);
 
     // 4. 配置合约权限和分配代币
     console.log("\n🔧 4. 配置合约权限和分配代币...");
     
-    // 为平台合约分配代币用于奖励
-    const platformAllocation = web3.utils.toWei(config.platformTokens.toString(), "ether");
-    const tx1 = await ydToken.transfer(platform.address, platformAllocation, {
-      gas: config.transferGasLimit,
-      gasPrice: config.gasPrice
-    });
-    console.log(`✅ 已向平台分配 ${config.platformTokens.toLocaleString()} YD 代币 (tx: ${tx1.tx})`);
-
-    // 为课程管理合约分配代币用于奖励
-    const courseAllocation = web3.utils.toWei(config.courseTokens.toString(), "ether");
-    const tx2 = await ydToken.transfer(courseManager.address, courseAllocation, {
-      gas: config.transferGasLimit,
-      gasPrice: config.gasPrice
-    });
-    console.log(`✅ 已向课程系统分配 ${config.courseTokens.toLocaleString()} YD 代币 (tx: ${tx2.tx})`);
 
     // 5. 验证合约状态
     console.log("\n🔍 5. 验证合约状态...");
-    const platformBalance = await ydToken.balanceOf(platform.address);
-    const courseBalance = await ydToken.balanceOf(courseManager.address);
     const ownerBalance = await ydToken.balanceOf(accounts[0]);
-    
-    console.log(`   平台合约代币余额: ${web3.utils.fromWei(platformBalance, 'ether')} YD`);
-    console.log(`   课程合约代币余额: ${web3.utils.fromWei(courseBalance, 'ether')} YD`);
     console.log(`   部署者代币余额: ${web3.utils.fromWei(ownerBalance, 'ether')} YD`);
 
-    // 6. 添加示例数据（仅开发环境）
-    if (network === "development" || network === "ganache") {
-      console.log("\n📖 6. 添加示例课程...");
-      await addSampleCourses(courseManager, instructor, config);
-    }
+
 
     // 7. 保存部署信息
     await saveDeploymentInfo(network, {
       ydToken: ydToken.address,
-      platform: platform.address,
-      courseManager: courseManager.address,
-      instructor: instructor,
       deploymentMethod: 'truffle-migrations'
     });
 
     console.log("\n🎉 所有合约部署完成!");
     printDeploymentSummary({
       ydToken: ydToken.address,
-      platform: platform.address,
-      courseManager: courseManager.address,
-      instructor: instructor,
       network: network
     });
 
@@ -214,45 +164,6 @@ function getDeploymentConfig(network) {
   return configs[network] || configs.development;
 }
 
-/**
- * 添加示例课程
- */
-async function addSampleCourses(courseManager, instructor, config) {
-  try {
-    console.log("   添加 Solidity 基础课程...");
-    await courseManager.addCourse(
-      "SOLIDITY_BASICS",
-      "Solidity 智能合约基础",
-      "学习 Solidity 编程语言的基础知识，包括变量、函数、修饰符等",
-      web3.utils.toWei("100", "ether"), // 100 YD 奖励
-      3600 * 24 * 7, // 7天课程
-      { 
-        from: instructor,
-        gas: config.transferGasLimit,
-        gasPrice: config.gasPrice
-      }
-    );
-    console.log("   ✅ Solidity 基础课程添加成功");
-
-    console.log("   添加 Web3 DApp 开发课程...");
-    await courseManager.addCourse(
-      "WEB3_DAPP",
-      "Web3 DApp 开发实战", 
-      "学习如何构建完整的去中心化应用，包括前端和智能合约交互",
-      web3.utils.toWei("200", "ether"), // 200 YD 奖励
-      3600 * 24 * 14, // 14天课程
-      { 
-        from: instructor,
-        gas: config.transferGasLimit,
-        gasPrice: config.gasPrice
-      }
-    );
-    console.log("   ✅ Web3 DApp 开发课程添加成功");
-    
-  } catch (error) {
-    console.error("   ⚠️ 添加示例课程时出错:", error.message);
-  }
-}
 
 /**
  * 保存部署信息到文件
@@ -286,8 +197,6 @@ function printDeploymentSummary(info) {
   console.log(`🔑 部署方式: 私钥部署 (Truffle Migrations)`);
   console.log(`🪙 YDToken: ${info.ydToken}`);
   console.log(`🏗️ 开发者平台: ${info.platform}`);
-  console.log(`📚 课程管理: ${info.courseManager}`);
-  console.log(`👨‍🏫 默认讲师: ${info.instructor}`);
   console.log("=".repeat(60));
   
   console.log("\n📋 下一步操作:");

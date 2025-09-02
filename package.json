@@ -8,8 +8,7 @@
     "compile:clean": "rm -rf build/ && truffle compile",
     
     "deploy": "truffle compile && truffle migrate --reset --network sepolia",
-    "deploy:local": "truffle compile && truffle migrate --reset --network development",
-    "deploy:ganache": "truffle compile && truffle migrate --reset --network ganache",
+    "deploy:local": "truffle compile && truffle migrate --reset --network ganache",
     "deploy:sepolia": "truffle compile && truffle migrate --reset --network sepolia",
     "deploy:mainnet": "truffle compile && truffle migrate --reset --network mainnet",
     "deploy:dashboard": "truffle migrate --network dashboard",

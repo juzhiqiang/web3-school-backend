@@ -77,18 +77,6 @@ module.exports = {
    * 网络配置
    */
   networks: {
-    // 本地开发网络
-    development: {
-      host: "127.0.0.1",
-      port: 8545,
-      network_id: "*",
-      gas: 6721975,
-      gasPrice: getGasPrice(20), // 20 gwei
-      confirmations: 0,
-      timeoutBlocks: 200,
-      skipDryRun: false
-    },
-
     // Ganache GUI
     ganache: {
       host: "127.0.0.1",
