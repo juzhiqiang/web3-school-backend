@@ -19,8 +19,8 @@ contract YiDengTokenSwap is Ownable, Pausable, ReentrancyGuard {
     uint256 public rate; // 1 ETH = rate * YiDeng tokens
     
     // 费率设置 (basis points: 100 = 1%)
-    uint256 public buyFeeRate = 100;  // 1% 购买手续费
-    uint256 public sellFeeRate = 100; // 1% 出售手续费
+    uint256 public buyFeeRate = 10; 
+    uint256 public sellFeeRate = 10; 
     uint256 public constant MAX_FEE_RATE = 1000; // 最大10%
     uint256 public constant BASIS_POINTS = 10000;
     

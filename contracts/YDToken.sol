@@ -6,12 +6,20 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title YDToken
- * @dev Web3 School 的奖励代币
+ * @dev Web3 School 代币合约实现
  */
 contract YDToken is ERC20, Ownable {
-    uint256 public constant TOTAL_SUPPLY = 10_000_000 * 10**18; // 1000万 YD
+
+    // 初始发行总量
+    uint256 public constant TOTAL_SUPPLY = 10_000_000 * 10**18; // 1000万 YD、
+
+    // 代币缩写
+    string public constant SYMBOL = "YD";
+    // 代币名称
+    string public constant NAME = "YD Token";
     
-    constructor() ERC20("YD Token", "YD") {
+    constructor() ERC20(NAME, SYMBOL) {
+        // 发行初始总量代币给合约部署者
         _mint(msg.sender, TOTAL_SUPPLY);
     }
     
@@ -27,5 +35,13 @@ contract YDToken is ERC20, Ownable {
      */
     function burn(uint256 amount) external {
         _burn(msg.sender, amount);
+    }
+
+    /**
+     * @dev 重写decimals函数，设置代币小数位为18位
+     */
+    function decimals() public view virtual override returns (uint8) {
+        return 18;
+
     }
 }

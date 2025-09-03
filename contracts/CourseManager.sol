@@ -4,13 +4,14 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./YDToken.sol";
+import "./YiDengTokenSwap.sol";
 
 /**
  * @title CourseManager - Web3课程管理合约
  * @dev 管理Web3开发课程和学生进度
  */
 contract CourseManager is Ownable, ReentrancyGuard {
-    // YDToken public ydToken;
+    YDToken public ydToken;
     
     // // 课程结构
     // struct Course {
@@ -64,9 +65,9 @@ contract CourseManager is Ownable, ReentrancyGuard {
     // event CourseCompleted(address indexed student, string indexed courseId, uint256 rewardAmount);
     // event InstructorAuthorized(address indexed instructor, bool authorized);
     
-    // constructor(address _ydTokenAddress) {
-    //     ydToken = YDToken(_ydTokenAddress);
-    // }
+    constructor(address _ydTokenAddress) {
+        ydToken = YDToken(_ydTokenAddress);
+    }
     
     // /**
     //  * @dev 授权/取消授权讲师

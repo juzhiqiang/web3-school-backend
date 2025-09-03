@@ -22,7 +22,6 @@ class DeploymentVerifier {
 
   initializeWeb3() {
     const rpcUrls = {
-      development: 'http://localhost:8545',
       ganache: 'http://localhost:7545',
       sepolia: `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
       mainnet: `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`
