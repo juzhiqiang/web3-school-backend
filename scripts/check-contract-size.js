@@ -11,7 +11,7 @@ const BUILD_DIR = './build/contracts';
 
 function checkContractSize() {
   console.log('🔍 检查合约字节码大小...');
-  console.log('=' = 50);
+  console.log('='.repeat(50));
   
   if (!fs.existsSync(BUILD_DIR)) {
     console.error('❌ 构建目录不存在，请先编译合约');
@@ -46,7 +46,7 @@ function checkContractSize() {
     console.log(`${status} ${contractName.padEnd(30)} ${sizeInKB.padStart(8)}KB (${percentage}%)`);
   });
   
-  console.log('=' * 50);
+  console.log('='.repeat(50));
   
   if (hasOversized) {
     console.log('❌ 发现超过大小限制的合约！');

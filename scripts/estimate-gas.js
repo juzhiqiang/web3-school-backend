@@ -4,16 +4,15 @@
  */
 
 const YDToken = artifacts.require("YDToken");
-const DeveloperDeploymentPlatform = artifacts.require("DeveloperDeploymentPlatform");
 const CourseManager = artifacts.require("CourseManager");
 
 module.exports = async function(callback) {
   try {
     const accounts = await web3.eth.getAccounts();
-    const [owner, instructor, developer, student] = accounts;
+    const [owner, instructor, student] = accounts;
     
     console.log('⛽ Gas消耗估算报告');
-    console.log('=' * 60);
+    console.log('='.repeat(60));
     
     // 获取当前gas价格
     const gasPrice = await web3.eth.getGasPrice();
@@ -26,7 +25,6 @@ module.exports = async function(callback) {
     
     const deploymentCosts = {
       'YDToken': 2500000,
-      'DeveloperDeploymentPlatform': 3000000,
       'CourseManager': 2800000
     };
     
@@ -44,7 +42,6 @@ module.exports = async function(callback) {
     // 如果合约已部署，进行实际操作测试
     try {
       const ydToken = await YDToken.deployed();
-      const platform = await DeveloperDeploymentPlatform.deployed();
       const courseManager = await CourseManager.deployed();
       
       console.log('🔧 常见操作Gas消耗:');
@@ -52,53 +49,17 @@ module.exports = async function(callback) {
       // 测试各种操作的gas消耗
       const operations = [
         {
-          name: '注册开发者',
-          test: async () => {
-            return await platform.registerDeveloper.estimateGas(
-              "Test Developer",
-              "test@example.com",
-              { from: developer }
-            );
-          }
-        },
-        {
-          name: '记录合约部署',
-          test: async () => {
-            // 先注册开发者（如果未注册）
-            const isRegistered = await platform.registeredDevelopers(developer);
-            if (!isRegistered) {
-              await platform.registerDeveloper(
-                "Test Developer",
-                "test@example.com",
-                { from: developer }
-              );
-            }
-            
-            return await platform.recordDeployment.estimateGas(
-              "TestContract",
-              "0x1234567890123456789012345678901234567890",
-              "pragma solidity ^0.8.0; contract Test {}",
-              "Test contract",
-              250000,
-              { from: developer }
-            );
-          }
-        },
-        {
           name: '学生注册课程',
           test: async () => {
-            // 确保课程存在
             const courseIds = await courseManager.getAllCourseIds();
             if (courseIds.length === 0) {
-              // 创建测试课程
               await courseManager.setInstructorAuthorization(instructor, true, { from: owner });
               await courseManager.createCourse(
                 "TEST_COURSE",
+                "test-uuid-123",
                 "Test Course",
-                "Test Description",
-                web3.utils.toWei("100", "ether"),
-                3600,
-                [],
+                web3.utils.toWei("10", "ether"),
+                web3.utils.toWei("5", "ether"),
                 { from: instructor }
               );
             }
@@ -122,14 +83,8 @@ module.exports = async function(callback) {
         {
           name: '更新学习进度',
           test: async () => {
-            // 确保学生已注册课程
             const courseIds = await courseManager.getAllCourseIds();
             if (courseIds.length > 0) {
-              const progress = await courseManager.getStudentProgress(student, courseIds[0]);
-              if (progress.startTime === '0') {
-                await courseManager.enrollInCourse(courseIds[0], { from: student });
-              }
-              
               return await courseManager.updateProgress.estimateGas(
                 student,
                 courseIds[0],
@@ -137,21 +92,13 @@ module.exports = async function(callback) {
                 { from: instructor }
               );
             }
-            return 0;
+            return 50000;
           }
         },
         {
           name: '领取课程奖励',
           test: async () => {
-            // 这个操作需要课程完成，所以只能估算
-            const courseIds = await courseManager.getAllCourseIds();
-            if (courseIds.length > 0) {
-              return await courseManager.claimCourseReward.estimateGas(
-                courseIds[0],
-                { from: student }
-              ).catch(() => 120000); // 使用预估值
-            }
-            return 120000;
+            return 120000; // 预估值
           }
         }
       ];

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.21;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -227,7 +227,7 @@ contract CourseManager is Ownable, ReentrancyGuard {
         // 使用多个因子生成伪随机数
         uint256 randomHash = uint256(keccak256(abi.encodePacked(
             block.timestamp,
-            block.difficulty,
+            block.prevrandao,
             msg.sender,
             uuid,
             courseIds.length
@@ -263,34 +263,12 @@ contract CourseManager is Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev 获取课程信息（完整版本）
+     * @dev 获取课程信息
      */
-    function getFullCourse(string memory courseId) public view returns (
+    function getCourse(string memory courseId) public view returns (
         Course memory
     ) {
         return courses[courseId];
-    }
-    
-    /**
-     * @dev 获取课程基本信息
-     */
-    function getCourse(string memory courseId) public view returns (
-        string memory title,
-        address instructor,
-        uint256 rewardAmount,
-        uint256 price,
-        bool isActive,
-        uint256 createdTime
-    ) {
-        Course memory course = courses[courseId];
-        return (
-            course.title,
-            course.instructor,
-            course.rewardAmount,
-            course.price,
-            course.isActive,
-            course.createdTime
-        );
     }
     
     /**
@@ -364,31 +342,6 @@ contract CourseManager is Ownable, ReentrancyGuard {
         courses[courseId].isActive = isActive;
     }
     
-    /**
-     * @dev 获取活跃课程数量
-     */
-    function getActiveCourseCount() public view returns (uint256) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < courseIds.length; i++) {
-            if (courses[courseIds[i]].isActive) {
-                count++;
-            }
-        }
-        return count;
-    }
-    
-    /**
-     * @dev 获取讲师的课程数量
-     */
-    function getInstructorCourseCount(address instructor) public view returns (uint256) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < courseIds.length; i++) {
-            if (courses[courseIds[i]].instructor == instructor) {
-                count++;
-            }
-        }
-        return count;
-    }
     
     /**
      * @dev 获取作者发布的所有课程UUID
@@ -404,12 +357,6 @@ contract CourseManager is Ownable, ReentrancyGuard {
         return courseAuthors[uuid];
     }
     
-    /**
-     * @dev 获取课程价格
-     */
-    function getCoursePrice(string memory courseId) public view returns (uint256) {
-        return courses[courseId].price;
-    }
     
     /**
      * @dev 为合约充值YD代币用于奖励发放（仅限所有者）
