@@ -12,26 +12,16 @@ import "./YDToken.sol";
 contract CourseManager is Ownable, ReentrancyGuard {
     YDToken public ydToken;
     
-    // 课程详细信息结构（简化版）
-    struct CourseMetadata {
-        string imageUrl;        // 课程封面图片
-        string category;        // 课程分类
-        string difficulty;      // 难度级别
-        uint256 estimatedHours; // 预计学习时间
-    }
-    
-    // 课程结构
+    // 课程结构（简化版 - 只存储核心信息）
     struct Course {
         string courseId;
+        string uuid;            // 课程UUID
         string title;
-        string description;
-        address instructor;
-        uint256 rewardAmount;
-        uint256 duration; // 课程时长（秒）
-        bool isActive;
-        uint256 createdTime;
-        string[] prerequisites; // 前置课程要求
-        CourseMetadata metadata; // 扩展的课程信息
+        address instructor;     // 讲师地址
+        uint256 rewardAmount;   // 完成奖励
+        uint256 price;          // 课程价格（YD代币）
+        bool isActive;          // 是否活跃
+        uint256 createdTime;    // 创建时间
         uint256 totalEnrollments; // 总注册人数
         uint256 completionCount;   // 完成人数
     }
@@ -47,33 +37,24 @@ contract CourseManager is Ownable, ReentrancyGuard {
         bool rewardClaimed;
     }
     
-    // 课程章节结构
-    struct Lesson {
-        string lessonId;
-        string courseId;
-        string title;
-        string content;
-        uint256 order;
-        bool isActive;
-    }
-    
     // 存储映射
     mapping(string => Course) public courses;
     mapping(address => mapping(string => StudentProgress)) public studentProgress;
-    mapping(string => Lesson[]) public courseLessons;
     mapping(address => string[]) public studentCourses; // 学生注册的课程
     mapping(string => address[]) public courseStudents; // 课程的学生列表
     mapping(address => bool) public authorizedInstructors;
+    mapping(address => string[]) public authorCourses; // 作者发布的课程UUID列表
+    mapping(string => address) public courseAuthors; // UUID到作者的映射
     
     // 课程列表
     string[] public courseIds;
     
     // 事件定义
-    event CourseCreated(string indexed courseId, string title, address instructor);
-    event StudentEnrolled(address indexed student, string indexed courseId);
+    event CourseCreated(string indexed courseId, string indexed uuid, string title, address instructor, uint256 price);
+    event StudentEnrolled(address indexed student, string indexed courseId, uint256 pricePaid);
     event CourseCompleted(address indexed student, string indexed courseId, uint256 rewardAmount);
     event InstructorAuthorized(address indexed instructor, bool authorized);
-    event CourseMetadataUpdated(string indexed courseId, address updatedBy);
+    event CoursePublishReward(address indexed instructor, string indexed uuid, uint256 rewardAmount);
     
     constructor(address _ydTokenAddress) {
         ydToken = YDToken(_ydTokenAddress);
@@ -88,96 +69,51 @@ contract CourseManager is Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev 创建新课程（增强版本，包含详细信息）
+     * @dev 创建新课程（简化版 - 只存储核心信息）
      */
     function createCourse(
         string memory courseId,
+        string memory uuid,
         string memory title,
-        string memory description,
         uint256 rewardAmount,
-        uint256 duration,
-        string[] memory prerequisites,
-        CourseMetadata memory metadata
+        uint256 price
     ) public {
         require(
             authorizedInstructors[msg.sender] || msg.sender == owner(),
             "Only authorized instructors can create courses"
         );
         require(bytes(courseId).length > 0, "Course ID cannot be empty");
+        require(bytes(uuid).length > 0, "UUID cannot be empty");
         require(bytes(courses[courseId].courseId).length == 0, "Course already exists");
+        require(courseAuthors[uuid] == address(0), "UUID already exists");
         
         courses[courseId] = Course({
             courseId: courseId,
+            uuid: uuid,
             title: title,
-            description: description,
             instructor: msg.sender,
             rewardAmount: rewardAmount,
-            duration: duration,
+            price: price,
             isActive: true,
             createdTime: block.timestamp,
-            prerequisites: prerequisites,
-            metadata: metadata,
             totalEnrollments: 0,
             completionCount: 0
         });
         
         courseIds.push(courseId);
+        authorCourses[msg.sender].push(uuid);
+        courseAuthors[uuid] = msg.sender;
         
-        emit CourseCreated(courseId, title, msg.sender);
+        // 发放课程发布奖励（1-10个随机YD代币）
+        _rewardCoursePublisher(msg.sender, uuid);
+        
+        emit CourseCreated(courseId, uuid, title, msg.sender, price);
     }
     
     /**
-     * @dev 创建简化课程（向后兼容）
+     * @dev 学生注册课程（需要支付YD代币）
      */
-    function createSimpleCourse(
-        string memory courseId,
-        string memory title,
-        string memory description,
-        uint256 rewardAmount,
-        uint256 duration,
-        string[] memory prerequisites
-    ) public {
-        // 创建空的元数据
-        CourseMetadata memory emptyMetadata = CourseMetadata({
-            imageUrl: "",
-            category: "",
-            difficulty: "",
-            estimatedHours: 0
-        });
-        
-        createCourse(courseId, title, description, rewardAmount, duration, prerequisites, emptyMetadata);
-    }
-    
-    /**
-     * @dev 添加课程章节
-     */
-    function addLesson(
-        string memory courseId,
-        string memory lessonId,
-        string memory title,
-        string memory content,
-        uint256 order
-    ) public {
-        require(bytes(courses[courseId].courseId).length > 0, "Course does not exist");
-        require(
-            courses[courseId].instructor == msg.sender || msg.sender == owner(),
-            "Only course instructor can add lessons"
-        );
-        
-        courseLessons[courseId].push(Lesson({
-            lessonId: lessonId,
-            courseId: courseId,
-            title: title,
-            content: content,
-            order: order,
-            isActive: true
-        }));
-    }
-    
-    /**
-     * @dev 学生注册课程
-     */
-    function enrollInCourse(string memory courseId) public {
+    function enrollInCourse(string memory courseId) public nonReentrant {
         require(bytes(courses[courseId].courseId).length > 0, "Course does not exist");
         require(courses[courseId].isActive, "Course is not active");
         require(
@@ -185,12 +121,19 @@ contract CourseManager is Ownable, ReentrancyGuard {
             "Already enrolled in this course"
         );
         
-        // 检查前置课程要求
-        string[] memory prerequisites = courses[courseId].prerequisites;
-        for (uint256 i = 0; i < prerequisites.length; i++) {
+        // 处理课程费用支付
+        uint256 coursePrice = courses[courseId].price;
+        if (coursePrice > 0) {
+            // 检查学生是否有足够的YD代币
             require(
-                studentProgress[msg.sender][prerequisites[i]].isCompleted,
-                "Prerequisites not completed"
+                ydToken.balanceOf(msg.sender) >= coursePrice,
+                "Insufficient YD tokens"
+            );
+            
+            // 将YD代币转给课程讲师
+            require(
+                ydToken.transferFrom(msg.sender, courses[courseId].instructor, coursePrice),
+                "Payment transfer failed"
             );
         }
         
@@ -210,7 +153,7 @@ contract CourseManager is Ownable, ReentrancyGuard {
         // 增加注册人数
         courses[courseId].totalEnrollments++;
         
-        emit StudentEnrolled(msg.sender, courseId);
+        emit StudentEnrolled(msg.sender, courseId, coursePrice);
     }
     
     /**
@@ -257,6 +200,44 @@ contract CourseManager is Ownable, ReentrancyGuard {
     }
     
     /**
+     * @dev 发放课程发布奖励
+     */
+    function _rewardCoursePublisher(address instructor, string memory uuid) internal {
+        // 生成1-10之间的随机数
+        uint256 randomReward = _generateRandomReward(uuid);
+        
+        // 转换为完整的代币数量（18位小数）
+        uint256 rewardAmount = randomReward * 10**18;
+        
+        // 发放奖励（需要合约有足够余额）
+        if (ydToken.balanceOf(address(this)) >= rewardAmount) {
+            require(
+                ydToken.transfer(instructor, rewardAmount),
+                "Publisher reward transfer failed"
+            );
+            
+            emit CoursePublishReward(instructor, uuid, randomReward);
+        }
+    }
+    
+    /**
+     * @dev 生成1-10之间的随机奖励数量
+     */
+    function _generateRandomReward(string memory uuid) internal view returns (uint256) {
+        // 使用多个因子生成伪随机数
+        uint256 randomHash = uint256(keccak256(abi.encodePacked(
+            block.timestamp,
+            block.difficulty,
+            msg.sender,
+            uuid,
+            courseIds.length
+        )));
+        
+        // 生成1-10之间的随机数 (1 + 0~9)
+        return 1 + (randomHash % 10);
+    }
+    
+    /**
      * @dev 领取课程完成奖励
      */
     function claimCourseReward(string memory courseId) public nonReentrant {
@@ -291,34 +272,25 @@ contract CourseManager is Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev 获取课程基本信息（向后兼容）
+     * @dev 获取课程基本信息
      */
     function getCourse(string memory courseId) public view returns (
         string memory title,
-        string memory description,
         address instructor,
         uint256 rewardAmount,
-        uint256 duration,
-        bool isActive
+        uint256 price,
+        bool isActive,
+        uint256 createdTime
     ) {
         Course memory course = courses[courseId];
         return (
             course.title,
-            course.description,
             course.instructor,
             course.rewardAmount,
-            course.duration,
-            course.isActive
+            course.price,
+            course.isActive,
+            course.createdTime
         );
-    }
-    
-    /**
-     * @dev 获取课程元数据
-     */
-    function getCourseMetadata(string memory courseId) public view returns (
-        CourseMetadata memory
-    ) {
-        return courses[courseId].metadata;
     }
     
     /**
@@ -344,49 +316,6 @@ contract CourseManager is Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev 批量获取课程基本信息
-     */
-    function getMultipleCoursesBasic(string[] memory courseIdList) public view returns (
-        string[] memory titles,
-        bool[] memory isActiveList
-    ) {
-        titles = new string[](courseIdList.length);
-        isActiveList = new bool[](courseIdList.length);
-        
-        for (uint256 i = 0; i < courseIdList.length; i++) {
-            Course memory course = courses[courseIdList[i]];
-            titles[i] = course.title;
-            isActiveList[i] = course.isActive;
-        }
-    }
-    
-    /**
-     * @dev 根据分类获取课程数量
-     */
-    function getCourseCountByCategory(string memory category) public view returns (uint256) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < courseIds.length; i++) {
-            if (keccak256(bytes(courses[courseIds[i]].metadata.category)) == keccak256(bytes(category))) {
-                count++;
-            }
-        }
-        return count;
-    }
-    
-    /**
-     * @dev 根据难度获取课程数量
-     */
-    function getCourseCountByDifficulty(string memory difficulty) public view returns (uint256) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < courseIds.length; i++) {
-            if (keccak256(bytes(courses[courseIds[i]].metadata.difficulty)) == keccak256(bytes(difficulty))) {
-                count++;
-            }
-        }
-        return count;
-    }
-    
-    /**
      * @dev 获取学生进度
      */
     function getStudentProgress(address student, string memory courseId) public view returns (
@@ -404,13 +333,6 @@ contract CourseManager is Ownable, ReentrancyGuard {
             sp.isCompleted,
             sp.rewardClaimed
         );
-    }
-    
-    /**
-     * @dev 获取课程章节列表
-     */
-    function getCourseLessons(string memory courseId) public view returns (Lesson[] memory) {
-        return courseLessons[courseId];
     }
     
     /**
@@ -432,24 +354,6 @@ contract CourseManager is Ownable, ReentrancyGuard {
      */
     function getCourseStudents(string memory courseId) public view returns (address[] memory) {
         return courseStudents[courseId];
-    }
-    
-    /**
-     * @dev 更新课程元数据
-     */
-    function updateCourseMetadata(
-        string memory courseId,
-        CourseMetadata memory newMetadata
-    ) public {
-        require(bytes(courses[courseId].courseId).length > 0, "Course does not exist");
-        require(
-            courses[courseId].instructor == msg.sender || msg.sender == owner(),
-            "Only course instructor can update metadata"
-        );
-        
-        courses[courseId].metadata = newMetadata;
-        
-        emit CourseMetadataUpdated(courseId, msg.sender);
     }
     
     /**
@@ -487,40 +391,24 @@ contract CourseManager is Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev 检查学生是否有权限访问课程
+     * @dev 获取作者发布的所有课程UUID
      */
-    function canAccessCourse(address student, string memory courseId) public view returns (bool) {
-        // 检查课程是否存在且活跃
-        if (bytes(courses[courseId].courseId).length == 0 || !courses[courseId].isActive) {
-            return false;
-        }
-        
-        // 检查前置课程要求
-        string[] memory prerequisites = courses[courseId].prerequisites;
-        for (uint256 i = 0; i < prerequisites.length; i++) {
-            if (!studentProgress[student][prerequisites[i]].isCompleted) {
-                return false;
-            }
-        }
-        
-        return true;
+    function getAuthorCourses(address author) public view returns (string[] memory) {
+        return authorCourses[author];
     }
     
     /**
-     * @dev 获取推荐课程数量（基于学生完成的课程）
+     * @dev 根据UUID获取课程作者
      */
-    function getRecommendedCourseCount(address student) public view returns (uint256) {
-        uint256 count = 0;
-        
-        for (uint256 i = 0; i < courseIds.length; i++) {
-            string memory courseId = courseIds[i];
-            if (canAccessCourse(student, courseId) && 
-                studentProgress[student][courseId].startTime == 0) {
-                count++;
-            }
-        }
-        
-        return count;
+    function getCourseAuthor(string memory uuid) public view returns (address) {
+        return courseAuthors[uuid];
+    }
+    
+    /**
+     * @dev 获取课程价格
+     */
+    function getCoursePrice(string memory courseId) public view returns (uint256) {
+        return courses[courseId].price;
     }
     
     /**
