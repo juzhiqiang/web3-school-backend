@@ -1,12 +1,13 @@
 /**
- * 主合约部署脚本 - 仅支持私钥安全部署
- * 部署 Web3 School 的核心合约：YDToken
+ * 主合约部署脚本 - Web3 School 核心合约部署
+ * 部署 YDToken、YiDengTokenSwap 和 CourseManager 合约
  *
  * 执行顺序: 2_deploy_contracts.js
  */
 
 const YDToken = artifacts.require("YDToken");
 const YiDengTokenSwap = artifacts.require("YiDengTokenSwap");
+const CourseManager = artifacts.require("CourseManager");
 
 module.exports = async function (deployer, network, accounts) {
   console.log("🚀 开始部署 Web3 School 智能合约...");
@@ -36,14 +37,6 @@ module.exports = async function (deployer, network, accounts) {
     const ydToken = await YDToken.deployed();
     console.log(`✅ YDToken 部署成功: ${ydToken.address}`);
 
-    console.log("\n📝 2. 部署 YiDengTokenSwap...");
-    await deployer.deploy(YiDengTokenSwap, ydToken.address, 1000, {
-      gas: config.gasLimit,
-      gasPrice: config.gasPrice,
-    });
-    const ethAndYDTransfer = await YiDengTokenSwap.deployed();
-    console.log(`✅ YiDengTokenSwap 部署成功: ${ethAndYDTransfer.address}`);
-
     // 验证代币部署
     const tokenName = await ydToken.name();
     const tokenSymbol = await ydToken.symbol();
@@ -52,22 +45,65 @@ module.exports = async function (deployer, network, accounts) {
     console.log(`   代币符号: ${tokenSymbol}`);
     console.log(`   总供应量: ${web3.utils.fromWei(totalSupply, "ether")} YD`);
 
+    // 2. 部署 YiDengTokenSwap
+    console.log("\n📝 2. 部署 YiDengTokenSwap...");
+    await deployer.deploy(YiDengTokenSwap, ydToken.address, 1000, {
+      gas: config.gasLimit,
+      gasPrice: config.gasPrice,
+    });
+    const yiDengTokenSwap = await YiDengTokenSwap.deployed();
+    console.log(`✅ YiDengTokenSwap 部署成功: ${yiDengTokenSwap.address}`);
+
+    // 3. 部署 CourseManager
+    console.log("\n📝 3. 部署 CourseManager...");
+    await deployer.deploy(CourseManager, ydToken.address, {
+      gas: config.gasLimit,
+      gasPrice: config.gasPrice,
+    });
+    const courseManager = await CourseManager.deployed();
+    console.log(`✅ CourseManager 部署成功: ${courseManager.address}`);
+
+    // 4. 初始化合约设置
+    console.log("\n🔧 4. 初始化合约设置...");
+    
+    // 为 CourseManager 合约充值代币用于奖励发放
+    const fundAmount = web3.utils.toWei(config.courseTokens.toString(), "ether");
+    console.log(`   向 CourseManager 充值 ${config.courseTokens} YD 代币...`);
+    
+    // 首先授权 CourseManager 合约使用代币
+    await ydToken.approve(courseManager.address, fundAmount, {
+      gas: config.transferGasLimit,
+      gasPrice: config.gasPrice,
+    });
+    console.log(`   ✅ 已授权 CourseManager 使用代币`);
+    
+    // 然后调用 fundContract 为合约充值
+    await courseManager.fundContract(fundAmount, {
+      gas: config.transferGasLimit,
+      gasPrice: config.gasPrice,
+    });
+    console.log(`   ✅ 已为 CourseManager 充值代币`);
+
     // 5. 验证合约状态
     console.log("\n🔍 5. 验证合约状态...");
     const ownerBalance = await ydToken.balanceOf(accounts[0]);
-    console.log(
-      `   部署者代币余额: ${web3.utils.fromWei(ownerBalance, "ether")} YD`
-    );
+    const contractBalance = await courseManager.getContractTokenBalance();
+    console.log(`   部署者代币余额: ${web3.utils.fromWei(ownerBalance, "ether")} YD`);
+    console.log(`   CourseManager 合约余额: ${web3.utils.fromWei(contractBalance, "ether")} YD`);
 
-    // 7. 保存部署信息
+    // 6. 保存部署信息
     await saveDeploymentInfo(network, {
       ydToken: ydToken.address,
+      yiDengTokenSwap: yiDengTokenSwap.address,
+      courseManager: courseManager.address,
       deploymentMethod: "truffle-migrations",
     });
 
     console.log("\n🎉 所有合约部署完成!");
     printDeploymentSummary({
       ydToken: ydToken.address,
+      yiDengTokenSwap: yiDengTokenSwap.address,
+      courseManager: courseManager.address,
       network: network,
     });
   } catch (error) {
@@ -129,14 +165,6 @@ async function validateDeploymentEnvironment(network, deployerAddress) {
  */
 function getDeploymentConfig(network) {
   const configs = {
-    development: {
-      gasLimit: 6721975,
-      gasPrice: web3.utils.toWei("20", "gwei"),
-      transferGasLimit: 100000,
-      platformTokens: 1000000, // 100万代币
-      courseTokens: 500000, // 50万代币
-      confirmations: 0,
-    },
     ganache: {
       gasLimit: 6721975,
       gasPrice: web3.utils.toWei("20", "gwei"),
@@ -177,9 +205,9 @@ async function saveDeploymentInfo(network, addresses) {
     contracts: addresses,
     securityFeatures: [
       "private-key-only",
-      "no-mnemonic-support",
+      "no-mnemonic-support", 
       "reentrancy-guard",
-      "pausable-contracts",
+      "access-control",
       "input-validation",
     ],
   };
@@ -195,7 +223,8 @@ function printDeploymentSummary(info) {
   console.log(`📡 网络: ${info.network}`);
   console.log(`🔑 部署方式: 私钥部署 (Truffle Migrations)`);
   console.log(`🪙 YDToken: ${info.ydToken}`);
-  console.log(`🏗️ 开发者平台: ${info.platform}`);
+  console.log(`💱 YiDengTokenSwap: ${info.yiDengTokenSwap}`);
+  console.log(`📚 CourseManager: ${info.courseManager}`);
   console.log("=".repeat(60));
 
   console.log("\n📋 下一步操作:");
@@ -208,6 +237,8 @@ function printDeploymentSummary(info) {
     console.log("\n💡 本地部署说明:");
     console.log("- 本地网络不需要私钥配置");
     console.log("- 使用 Truffle 内置账户进行部署");
+    console.log("- CourseManager 已自动充值代币用于奖励发放");
+    console.log("- YiDengTokenSwap 支持 ETH/YD 代币兑换");
     console.log("- 适用于开发和测试环境");
   } else if (info.network !== "mainnet") {
     console.log("\n⚠️ 注意: 这是测试网络部署，请勿用于生产环境");
