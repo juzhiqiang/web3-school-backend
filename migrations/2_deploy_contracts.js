@@ -130,12 +130,8 @@ async function validateDeploymentEnvironment(network, deployerAddress) {
     throw new Error("❌ 远程网络部署必须在 .env 文件中设置 PRIVATE_KEY");
   }
 
-  if (!PRIVATE_KEY.startsWith("0x")) {
-    throw new Error("❌ 私钥必须以 0x 开头");
-  }
-
-  if (PRIVATE_KEY.length !== 66) {
-    throw new Error("❌ 私钥长度必须为 66 个字符 (包含 0x 前缀)");
+  if (PRIVATE_KEY.length !== 64) {
+    throw new Error("❌ 私钥长度必须为 64 个字符");
   }
 
   console.log("✅ 私钥格式验证通过");

@@ -1,25 +1,25 @@
 /**
  * Web3 School Backend - Truffle 配置
- * 
+ *
  * 🔑 仅支持私钥部署方式 (安全性更高)
  * 支持部署方式:
  * 1. 私钥部署 - 设置 PRIVATE_KEY 环境变量
  * 2. Truffle Dashboard - 使用浏览器钱包
- * 
+ *
  * 使用方法:
  * truffle migrate --network <network-name>
  */
 
-require('dotenv').config();
-const HDWalletProvider = require('@truffle/hdwallet-provider');
+require("dotenv").config();
+const HDWalletProvider = require("@truffle/hdwallet-provider");
 
 // 环境变量
-const { 
-  PRIVATE_KEY,           // 私钥 (必需)
-  INFURA_PROJECT_ID,     // Infura 项目ID
-  ALCHEMY_API_KEY,       // Alchemy API Key (备选)
-  ETHERSCAN_API_KEY,     // 合约验证
-  GAS_PRICE_GWEI         // 自定义 Gas 价格
+const {
+  PRIVATE_KEY, // 私钥 (必需)
+  INFURA_PROJECT_ID, // Infura 项目ID
+  ALCHEMY_API_KEY, // Alchemy API Key (备选)
+  ETHERSCAN_API_KEY, // 合约验证
+  GAS_PRICE_GWEI, // 自定义 Gas 价格
 } = process.env;
 
 /**
@@ -29,36 +29,26 @@ function createProvider(rpcUrl) {
   if (!PRIVATE_KEY) {
     throw new Error("❌ 必须在 .env 文件中设置 PRIVATE_KEY");
   }
-  
-  if (!PRIVATE_KEY.startsWith('0x')) {
-    throw new Error("❌ 私钥必须以 0x 开头");
-  }
-  
-  console.log("🔑 使用私钥部署");
+
   return new HDWalletProvider(PRIVATE_KEY, rpcUrl);
 }
 
 /**
  * 获取 RPC URL
  */
-function getRpcUrl(network, nodeProvider = 'infura') {
+function getRpcUrl(network, nodeProvider = "infura") {
   const urls = {
     infura: {
-      goerli: `https://goerli.infura.io/v3/${INFURA_PROJECT_ID}`,
       sepolia: `https://sepolia.infura.io/v3/${INFURA_PROJECT_ID}`,
       mainnet: `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`,
-      polygon: `https://polygon-mainnet.infura.io/v3/${INFURA_PROJECT_ID}`,
-      arbitrum: `https://arbitrum-mainnet.infura.io/v3/${INFURA_PROJECT_ID}`
     },
     alchemy: {
       goerli: `https://eth-goerli.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       sepolia: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       mainnet: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-      polygon: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-      arbitrum: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
-    }
+    },
   };
-  
+
   return urls[nodeProvider][network];
 }
 
@@ -86,50 +76,35 @@ module.exports = {
       gasPrice: getGasPrice(20),
       confirmations: 0,
       timeoutBlocks: 200,
-      skipDryRun: false
+      skipDryRun: false,
     },
 
     // Sepolia 测试网 (推荐)
     sepolia: {
       provider: () => {
-        const rpcUrl = getRpcUrl('sepolia', ALCHEMY_API_KEY ? 'alchemy' : 'infura');
+        const rpcUrl = getRpcUrl(
+          "sepolia",
+          ALCHEMY_API_KEY ? "alchemy" : "infura"
+        );
         return createProvider(rpcUrl);
       },
       network_id: 11155111,
-      gas: 5000000,
-      gasPrice: getGasPrice(20), // 20 gwei
+      gas: 6000000,
+      gasPrice: getGasPrice(30),
       confirmations: 2,
       timeoutBlocks: 200,
       skipDryRun: true,
       networkCheckTimeout: 1000000,
-      deploymentPollingInterval: 10000
-    },
-
-    // Polygon Mumbai 测试网
-    mumbai: {
-      provider: () => createProvider("https://rpc-mumbai.maticvigil.com/"),
-      network_id: 80001,
-      gas: 8000000,
-      gasPrice: getGasPrice(30), // 30 gwei
-      confirmations: 2,
-      timeoutBlocks: 200,
-      skipDryRun: true
-    },
-
-    // Arbitrum Sepolia 测试网
-    arbitrum_sepolia: {
-      provider: () => createProvider("https://sepolia-rollup.arbitrum.io/rpc"),
-      network_id: 421614,
-      gas: 8000000,
-      gasPrice: getGasPrice(1), // 1 gwei (Arbitrum 更便宜)
-      confirmations: 2,
-      skipDryRun: true
+      deploymentPollingInterval: 15000,
     },
 
     // 以太坊主网 (生产环境)
     mainnet: {
       provider: () => {
-        const rpcUrl = getRpcUrl('mainnet', ALCHEMY_API_KEY ? 'alchemy' : 'infura');
+        const rpcUrl = getRpcUrl(
+          "mainnet",
+          ALCHEMY_API_KEY ? "alchemy" : "infura"
+        );
         return createProvider(rpcUrl);
       },
       network_id: 1,
@@ -140,50 +115,24 @@ module.exports = {
       skipDryRun: false, // 主网必须进行 dry run
       networkCheckTimeout: 1000000,
       deploymentPollingInterval: 10000,
-      production: true
-    },
-
-    // Polygon 主网
-    polygon: {
-      provider: () => {
-        const rpcUrl = getRpcUrl('polygon', ALCHEMY_API_KEY ? 'alchemy' : 'infura');
-        return createProvider(rpcUrl);
-      },
-      network_id: 137,
-      gas: 8000000,
-      gasPrice: getGasPrice(50), // 50 gwei
-      confirmations: 3,
-      skipDryRun: false,
-      production: true
-    },
-
-    // Arbitrum 主网
-    arbitrum: {
-      provider: () => {
-        const rpcUrl = getRpcUrl('arbitrum', ALCHEMY_API_KEY ? 'alchemy' : 'infura');
-        return createProvider(rpcUrl);
-      },
-      network_id: 42161,
-      gas: 8000000,
-      gasPrice: getGasPrice(2), // 2 gwei
-      confirmations: 3,
-      skipDryRun: false,
-      production: true
+      production: true,
     },
 
     // Truffle Dashboard (推荐用于测试网/主网)
     dashboard: {
       port: 24012,
       networkCheckTimeout: 120000,
-      timeoutBlocks: 200
-    }
+      timeoutBlocks: 200,
+    },
   },
 
   // Mocha 测试配置
   mocha: {
     timeout: 100000,
-    reporter: process.env.CI ? 'json' : 'spec',
-    reporterOptions: process.env.CI ? { output: 'test-results.json' } : undefined
+    reporter: process.env.CI ? "json" : "spec",
+    reporterOptions: process.env.CI
+      ? { output: "test-results.json" }
+      : undefined,
   },
 
   // Solidity 编译器配置
@@ -198,29 +147,36 @@ module.exports = {
             yul: true,
             yulDetails: {
               stackAllocation: true,
-              optimizerSteps: "dhfoDgvulfnTUtnIf"
-            }
-          }
+              optimizerSteps: "dhfoDgvulfnTUtnIf",
+            },
+          },
         },
         evmVersion: "london",
         viaIR: false, // 设为 false 避免某些网络的兼容性问题
         metadata: {
-          bytecodeHash: "ipfs"
+          bytecodeHash: "ipfs",
         },
         outputSelection: {
           "*": {
-            "*": ["evm.bytecode", "evm.deployedBytecode", "devdoc", "userdoc", "metadata", "abi"]
-          }
-        }
-      }
-    }
+            "*": [
+              "evm.bytecode",
+              "evm.deployedBytecode",
+              "devdoc",
+              "userdoc",
+              "metadata",
+              "abi",
+            ],
+          },
+        },
+      },
+    },
   },
 
   // 插件配置
   plugins: [
-    'truffle-plugin-verify',
-    'solidity-coverage',
-    'truffle-contract-size'
+    "truffle-plugin-verify",
+    "solidity-coverage",
+    "truffle-contract-size",
   ],
 
   // 合约验证 API Keys
@@ -229,14 +185,14 @@ module.exports = {
     bscscan: process.env.BSCSCAN_API_KEY,
     polygonscan: process.env.POLYGONSCAN_API_KEY,
     arbiscan: process.env.ARBISCAN_API_KEY,
-    optimistic_etherscan: process.env.OPTIMISTIC_ETHERSCAN_API_KEY
+    optimistic_etherscan: process.env.OPTIMISTIC_ETHERSCAN_API_KEY,
   },
 
   // 目录配置
-  contracts_directory: './contracts/',
-  contracts_build_directory: './build/contracts/',
-  migrations_directory: './migrations/',
-  test_directory: './test/',
+  contracts_directory: "./contracts/",
+  contracts_build_directory: "./build/contracts/",
+  migrations_directory: "./migrations/",
+  test_directory: "./test/",
 
   // Truffle DB 配置
   db: {
@@ -246,14 +202,14 @@ module.exports = {
     adapter: {
       name: "sqlite",
       settings: {
-        directory: ".db"
-      }
-    }
+        directory: ".db",
+      },
+    },
   },
 
   // 仪表板配置
   dashboard: {
     port: 24012,
-    host: "localhost"
-  }
+    host: "localhost",
+  },
 };
