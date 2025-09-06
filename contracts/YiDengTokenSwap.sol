@@ -61,15 +61,12 @@ contract YiDengTokenSwap is Ownable, Pausable, ReentrancyGuard {
      * @param _tokenAddress 一灯币合约地址
      * @param _rate 初始兑换率
      */
-    constructor(address _tokenAddress, uint256 _rate) {
+    constructor(address _tokenAddress, uint256 _rate) Ownable(msg.sender) {
         if (_tokenAddress == address(0)) revert InvalidTokenAddress();
         if (_rate == 0) revert InvalidRate();
         
         yiDengToken = IERC20(_tokenAddress);
         rate = _rate;
-        
-        // 转移所有权给部署者
-        _transferOwnership(msg.sender);
     }
     
     /**
