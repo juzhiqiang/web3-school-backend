@@ -13,7 +13,7 @@
     "deploy:dashboard": "truffle migrate --network dashboard",
     "deploy:privatekey": "node scripts/deploy-helper.js --network sepolia",
     "deploy:privatekey:mainnet": "node scripts/deploy-helper.js --network mainnet --verify",
-    "deploy:verify": "node scripts/deploy-helper.js --network sepolia --verify",
+    "deploy:verify": "node scripts/verify-contracts --network sepolia --verify",
     "verify:deployment": "node scripts/verify-deployment.js --network sepolia",
     "verify:deployment:test": "node scripts/verify-deployment.js --network sepolia --test",
     "test": "truffle test",

@@ -175,9 +175,9 @@ module.exports = {
   // 插件配置
   plugins: [
     "truffle-plugin-verify",
-    "solidity-coverage",
-    "truffle-contract-size",
   ],
+    // "solidity-coverage",
+    // "truffle-contract-size",
 
   // 合约验证 API Keys
   api_keys: {
